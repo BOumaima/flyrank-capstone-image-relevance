@@ -1,0 +1,242 @@
+[
+    {
+        "filename": "red-fox.jpg",
+        "category": "animals",
+        "subject": "red fox",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "wolf.jpg",
+        "category": "animals",
+        "subject": "wolf",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "golden-retriever.jpg",
+        "category": "animals",
+        "subject": "golden retriever",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "cat.jpg",
+        "category": "animals",
+        "subject": "cat",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "elephant.jpg",
+        "category": "animals",
+        "subject": "elephant",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "lion.jpg",
+        "category": "animals",
+        "subject": "lion",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "horse.jpg",
+        "category": "animals",
+        "subject": "horse",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "bear.jpg",
+        "category": "animals",
+        "subject": "bear",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "rabbit.jpg",
+        "category": "animals",
+        "subject": "rabbit",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "deer.jpg",
+        "category": "animals",
+        "subject": "deer",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "car.jpg",
+        "category": "vehicles",
+        "subject": "car",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "motorcycle.jpg",
+        "category": "vehicles",
+        "subject": "motorcycle",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "bicycle.jpg",
+        "category": "vehicles",
+        "subject": "bicycle",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "bus.jpg",
+        "category": "vehicles",
+        "subject": "bus",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "train.jpg",
+        "category": "vehicles",
+        "subject": "train",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "airplane.jpg",
+        "category": "vehicles",
+        "subject": "airplane",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "boat.jpg",
+        "category": "vehicles",
+        "subject": "boat",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "truck.jpg",
+        "category": "vehicles",
+        "subject": "truck",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "scooter.jpg",
+        "category": "vehicles",
+        "subject": "scooter",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "helicopter.jpg",
+        "category": "vehicles",
+        "subject": "helicopter",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "pizza.jpg",
+        "category": "food",
+        "subject": "pizza",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "burger.jpg",
+        "category": "food",
+        "subject": "burger",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "pasta.jpg",
+        "category": "food",
+        "subject": "pasta",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "sushi.jpg",
+        "category": "food",
+        "subject": "sushi",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "salad.jpg",
+        "category": "food",
+        "subject": "salad",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "cake.jpg",
+        "category": "food",
+        "subject": "cake",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "apple.jpg",
+        "category": "food",
+        "subject": "apple",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "bread.jpg",
+        "category": "food",
+        "subject": "bread",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "sandwich.jpg",
+        "category": "food",
+        "subject": "sandwich",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "ice-cream.jpg",
+        "category": "food",
+        "subject": "ice cream",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "forest.jpg",
+        "category": "nature",
+        "subject": "forest",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "mountain.jpg",
+        "category": "nature",
+        "subject": "mountain",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "waterfall.jpg",
+        "category": "nature",
+        "subject": "waterfall",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "beach.jpg",
+        "category": "nature",
+        "subject": "beach",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "desert.jpg",
+        "category": "nature",
+        "subject": "desert",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "lake.jpg",
+        "category": "nature",
+        "subject": "lake",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "river.jpg",
+        "category": "nature",
+        "subject": "river",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "snowy-mountain.jpg",
+        "category": "nature",
+        "subject": "snowy mountain",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "sunset.jpg",
+        "category": "nature",
+        "subject": "sunset",
+        "source": "Gemini-generated"
+    },
+    {
+        "filename": "flower-field.jpg",
+        "category": "nature",
+        "subject": "flower field",
+        "source": "Gemini-generated"
+    }
+]
