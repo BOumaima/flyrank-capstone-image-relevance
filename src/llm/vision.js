@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { imageMetadataSchema } from "../schemas/imageMetadata.js";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
@@ -65,5 +66,14 @@ export async function analyzeImage(imageBase64, mimeType) {
         },
     });
 
-    return JSON.parse(response.text);
+    const metadata = JSON.parse(response.text);
+
+    const result = imageMetadataSchema.safeParse(metadata);
+
+    if (!result.success) {
+        console.error("Invalid Gemini metadata:", result.error.issues);
+        throw new Error("Gemini returned invalid image metadata");
+    }
+
+    return result.data;
 }
