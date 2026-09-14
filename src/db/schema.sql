@@ -20,3 +20,11 @@ CREATE TABLE IF NOT EXISTS llm_usage (
     estimated_cost_usd NUMERIC(10, 6) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS image_embeddings (
+    image_id INTEGER PRIMARY KEY REFERENCES images(id) ON DELETE CASCADE,
+    model TEXT NOT NULL,
+    dimensions INTEGER NOT NULL,
+    vector JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
