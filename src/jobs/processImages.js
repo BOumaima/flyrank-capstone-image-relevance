@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { logLlmUsage } from "../db/usage.js";
 
 import { analyzeImage } from "../llm/vision.js";
 import { pool } from "../db/client.js";
@@ -56,12 +57,21 @@ async function processImages() {
                 const imageBuffer = await fs.readFile(imagePath);
                 const imageBase64 = imageBuffer.toString("base64");
 
-                const metadata = await analyzeImage(
+                const { metadata, usage } = await analyzeImage(
                     imageBase64,
                     "image/jpeg"
                 );
 
                 await saveImageMetadata(filename, metadata);
+
+                await logLlmUsage({
+                    imageFilename: filename,
+                    model: process.env.GEMINI_MODEL,
+                    status: "success",
+                    inputTokens: usage?.promptTokenCount ?? null,
+                    outputTokens: usage?.candidatesTokenCount ?? null,
+                    totalTokens: usage?.totalTokenCount ?? null,
+                });
 
                 console.log(
                     `Saved: ${metadata.subject} (${metadata.confidence})`
@@ -71,6 +81,12 @@ async function processImages() {
                     `Failed: ${category}/${filename}`,
                     error.message
                 );
+
+                await logLlmUsage({
+                    imageFilename: filename,
+                    model: process.env.GEMINI_MODEL,
+                    status: "failed",
+                });
             }
         }
     }

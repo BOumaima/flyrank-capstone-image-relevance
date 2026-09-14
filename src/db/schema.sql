@@ -8,3 +8,15 @@ CREATE TABLE IF NOT EXISTS images (
     confidence REAL NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS llm_usage (
+    id SERIAL PRIMARY KEY,
+    image_filename TEXT,
+    model TEXT NOT NULL,
+    status TEXT NOT NULL,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    total_tokens INTEGER,
+    estimated_cost_usd NUMERIC(10, 6) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
