@@ -1,13 +1,28 @@
 import { pool } from "./client.js";
 
-export async function savePost({ title, content }) {
+export async function savePost({
+    title,
+    content,
+    subject,
+    category,
+}) {
     const result = await pool.query(
         `
-        INSERT INTO posts (title, content)
-        VALUES ($1, $2)
+        INSERT INTO posts (
+            title,
+            content,
+            subject,
+            category
+        )
+        VALUES ($1, $2, $3, $4)
         RETURNING *
         `,
-        [title, content]
+        [
+            title,
+            content,
+            subject,
+            category,
+        ]
     );
 
     return result.rows[0];
