@@ -1,0 +1,11 @@
+run: npm start
+
+seed: node --env-file=.env src/jobs/seedPosts.js
+
+test: node --env-file=.env src/evaluation/runEval.js
+
+base_url: http://localhost:3000
+
+endpoints:
+  - GET /health
+  - GET /posts/:id/images
