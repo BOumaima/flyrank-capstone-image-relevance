@@ -26,6 +26,13 @@ async function saveImageMetadata(filename, metadata) {
             confidence
         )
         VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (filename)
+        DO UPDATE SET
+            subject = EXCLUDED.subject,
+            category = EXCLUDED.category,
+            attributes = EXCLUDED.attributes,
+            caption = EXCLUDED.caption,
+            confidence = EXCLUDED.confidence
         `,
         [
             filename,
@@ -45,7 +52,19 @@ async function processImages() {
         const files = await fs.readdir(categoryPath);
 
         for (const filename of files) {
-            if (!filename.endsWith(".jpg")) {
+            if (!filename.endsWith(".jpg")) continue;
+
+            const existingImage = await pool.query(
+                `
+                SELECT id
+                FROM images
+                WHERE filename = $1
+                `,
+                [filename]
+            );
+
+            if (existingImage.rows.length > 0) {
+                console.log(`Skipping existing image: ${filename}`);
                 continue;
             }
 

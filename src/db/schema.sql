@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
-    filename TEXT NOT NULL,
+    filename TEXT NOT NULL UNIQUE,
     subject TEXT NOT NULL,
     category TEXT NOT NULL,
     attributes JSONB NOT NULL,
@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS images (
     confidence REAL NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS images_filename_unique
+ON images(filename);
 
 CREATE TABLE IF NOT EXISTS llm_usage (
     id SERIAL PRIMARY KEY,
