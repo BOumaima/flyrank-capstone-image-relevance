@@ -1,0 +1,1 @@
+export const IMAGE_REVIEW_THRESHOLD = 0.70;

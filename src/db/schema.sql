@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS images (
     attributes JSONB NOT NULL,
     caption TEXT NOT NULL,
     confidence REAL NOT NULL,
+    review_status TEXT NOT NULL DEFAULT 'accepted',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

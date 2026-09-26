@@ -4,6 +4,7 @@ import { logLlmUsage } from "../db/usage.js";
 
 import { analyzeImage } from "../llm/vision.js";
 import { pool } from "../db/client.js";
+import { IMAGE_REVIEW_THRESHOLD } from "../config/imageReview.js";
 
 const datasetPath = "dataset";
 
@@ -14,7 +15,7 @@ const categories = [
     "nature",
 ];
 
-async function saveImageMetadata(filename, metadata) {
+async function saveImageMetadata(filename, metadata, reviewStatus) {
     await pool.query(
         `
         INSERT INTO images (
@@ -23,16 +24,18 @@ async function saveImageMetadata(filename, metadata) {
             category,
             attributes,
             caption,
-            confidence
+            confidence,
+            review_status
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (filename)
         DO UPDATE SET
             subject = EXCLUDED.subject,
             category = EXCLUDED.category,
             attributes = EXCLUDED.attributes,
             caption = EXCLUDED.caption,
-            confidence = EXCLUDED.confidence
+            confidence = EXCLUDED.confidence,
+            review_status = EXCLUDED.review_status
         `,
         [
             filename,
@@ -41,6 +44,7 @@ async function saveImageMetadata(filename, metadata) {
             JSON.stringify(metadata.attributes),
             metadata.caption,
             metadata.confidence,
+            reviewStatus,
         ]
     );
 }
@@ -81,7 +85,12 @@ async function processImages() {
                     "image/jpeg"
                 );
 
-                await saveImageMetadata(filename, metadata);
+                const reviewStatus =
+                    metadata.confidence >= IMAGE_REVIEW_THRESHOLD
+                        ? "accepted"
+                        : "needs_review";
+
+                await saveImageMetadata(filename, metadata, reviewStatus);
 
                 await logLlmUsage({
                     imageFilename: filename,
