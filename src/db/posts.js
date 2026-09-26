@@ -15,6 +15,11 @@ export async function savePost({
             category
         )
         VALUES ($1, $2, $3, $4)
+        ON CONFLICT (title)
+        DO UPDATE SET
+            content = EXCLUDED.content,
+            subject = EXCLUDED.subject,
+            category = EXCLUDED.category
         RETURNING *
         `,
         [
