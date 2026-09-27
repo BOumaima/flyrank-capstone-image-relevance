@@ -1,5 +1,6 @@
 import { generateEmbedding } from "../llm/embedding.js";
 import { pool } from "../db/client.js";
+import { logLlmUsage } from "../db/usage.js";
 
 async function savePostEmbedding({
     postId,
@@ -55,12 +56,21 @@ async function generatePostEmbeddings() {
         try {
             const text = `${post.title}. ${post.content}`;
 
-            const vector = await generateEmbedding(text);
+            const { vector, usage } = await generateEmbedding(text);
 
             await savePostEmbedding({
                 postId: post.id,
                 model: process.env.GEMINI_EMBEDDING_MODEL,
                 vector,
+            });
+
+            await logLlmUsage({
+                operation: "embedding",
+                model: process.env.GEMINI_EMBEDDING_MODEL,
+                status: "success",
+                inputTokens: usage?.promptTokenCount ?? null,
+                outputTokens: usage?.candidatesTokenCount ?? null,
+                totalTokens: usage?.totalTokenCount ?? null,
             });
 
             console.log(
@@ -71,6 +81,12 @@ async function generatePostEmbeddings() {
                 `Failed: ${post.title}`,
                 error.message
             );
+
+            await logLlmUsage({
+                operation: "embedding",
+                model: process.env.GEMINI_EMBEDDING_MODEL,
+                status: "failed",
+            });
         }
     }
 
