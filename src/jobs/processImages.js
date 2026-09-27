@@ -93,6 +93,7 @@ async function processImages() {
                 await saveImageMetadata(filename, metadata, reviewStatus);
 
                 await logLlmUsage({
+                    operation: "vision",
                     imageFilename: filename,
                     model: process.env.GEMINI_MODEL,
                     status: "success",
@@ -111,6 +112,7 @@ async function processImages() {
                 );
 
                 await logLlmUsage({
+                    operation: "vision",
                     imageFilename: filename,
                     model: process.env.GEMINI_MODEL,
                     status: "failed",

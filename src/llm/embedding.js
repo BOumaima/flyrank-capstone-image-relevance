@@ -13,5 +13,8 @@ export async function generateEmbedding(text) {
         },
     });
 
-    return response.embeddings[0].values;
+    return {
+        vector: response.embeddings[0].values,
+        usage: response.usageMetadata ?? null,
+    };
 }

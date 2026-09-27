@@ -15,6 +15,7 @@ ON images(filename);
 
 CREATE TABLE IF NOT EXISTS llm_usage (
     id SERIAL PRIMARY KEY,
+    operation TEXT NOT NULL DEFAULT 'vision',
     image_filename TEXT,
     model TEXT NOT NULL,
     status TEXT NOT NULL,

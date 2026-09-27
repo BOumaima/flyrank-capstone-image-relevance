@@ -1,7 +1,8 @@
 import { pool } from "./client.js";
 
 export async function logLlmUsage({
-    imageFilename,
+    operation = "vision",
+    imageFilename = null,
     model,
     status,
     inputTokens = null,
@@ -12,6 +13,7 @@ export async function logLlmUsage({
     await pool.query(
         `
         INSERT INTO llm_usage (
+            operation,
             image_filename,
             model,
             status,
@@ -20,9 +22,10 @@ export async function logLlmUsage({
             total_tokens,
             estimated_cost_usd
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         `,
         [
+            operation,
             imageFilename,
             model,
             status,

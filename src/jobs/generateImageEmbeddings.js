@@ -1,5 +1,6 @@
 import { generateEmbedding } from "../llm/embedding.js";
 import { saveImageEmbedding } from "../db/embeddings.js";
+import { logLlmUsage } from "../db/usage.js";
 import { pool } from "../db/client.js";
 
 async function generateImageEmbeddings() {
@@ -23,12 +24,22 @@ async function generateImageEmbeddings() {
         console.log(`Embedding: ${image.filename}`);
 
         try {
-            const vector = await generateEmbedding(image.caption);
+            const { vector, usage } = await generateEmbedding(image.caption);
 
             await saveImageEmbedding({
                 imageId: image.id,
                 model: process.env.GEMINI_EMBEDDING_MODEL,
                 vector,
+            });
+
+            await logLlmUsage({
+                operation: "embedding",
+                imageFilename: image.filename,
+                model: process.env.GEMINI_EMBEDDING_MODEL,
+                status: "success",
+                inputTokens: usage?.promptTokenCount ?? null,
+                outputTokens: usage?.candidatesTokenCount ?? null,
+                totalTokens: usage?.totalTokenCount ?? null,
             });
 
             console.log(
@@ -39,6 +50,13 @@ async function generateImageEmbeddings() {
                 `Failed: ${image.filename}`,
                 error.message
             );
+
+            await logLlmUsage({
+                operation: "embedding",
+                imageFilename: image.filename,
+                model: process.env.GEMINI_EMBEDDING_MODEL,
+                status: "failed",
+            });
         }
     }
 
