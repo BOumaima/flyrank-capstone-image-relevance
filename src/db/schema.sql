@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS posts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS posts_title_unique
+ON posts(title);
+
 CREATE TABLE IF NOT EXISTS post_embeddings (
     post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
     model TEXT NOT NULL,
