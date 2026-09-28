@@ -19,4 +19,24 @@ export const evalSet = [
         postId: 5,
         expectedImage: "apple.jpg",
     },
+    {
+        postId: 51,
+        expectedImage: "golden-retriever.jpg",
+    },
+    {
+        postId: 52,
+        expectedImage: "elephant.jpg",
+    },
+    {
+        postId: 53,
+        expectedImage: "pizza.jpg",
+    },
+    {
+        postId: 54,
+        expectedImage: "forest.jpg",
+    },
+    {
+        postId: 55,
+        expectedImage: "waterfall.jpg",
+    },
 ];
