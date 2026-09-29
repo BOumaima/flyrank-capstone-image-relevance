@@ -1,7 +1,21 @@
 const DEFAULT_CONFIG = {
-    minSimilarity: 0.30,
+    minSimilarity: 0.24,
     minConfidence: 0.70,
 };
+
+function normalizeText(value) {
+    return value.trim().toLowerCase();
+}
+
+function subjectMatches(expectedSubject, detectedSubject) {
+    const expected = normalizeText(expectedSubject);
+    const detected = normalizeText(detectedSubject);
+
+    return (
+        expected === detected ||
+        detected.includes(expected)
+    );
+}
 
 export function mismatchGuard({
     expectedSubject,
@@ -9,7 +23,11 @@ export function mismatchGuard({
     candidate,
     config = DEFAULT_CONFIG,
 }) {
-    if (candidate.category !== expectedCategory) {
+    const expectedCategoryNormalized = normalizeText(expectedCategory);
+
+    const candidateCategoryNormalized = normalizeText(candidate.category);
+
+    if (candidateCategoryNormalized !==expectedCategoryNormalized) {
         return {
             accepted: false,
             reason:
@@ -18,7 +36,7 @@ export function mismatchGuard({
         };
     }
 
-    if (candidate.subject.toLowerCase() !== expectedSubject.toLowerCase()) {
+    if (!subjectMatches(expectedSubject,candidate.subject)) {
         return {
             accepted: false,
             reason:

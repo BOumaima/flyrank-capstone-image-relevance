@@ -1,5 +1,5 @@
 import { pool } from "../db/client.js";
-import { rankImagesForPost } from "../matching/rankImages.js";
+import { findMatchForPost } from "../matching/findMatch.js";
 import { evalSet } from "./evalSet.js";
 
 async function runEvaluation() {
@@ -8,9 +8,9 @@ async function runEvaluation() {
     console.log("Running evaluation...\n");
 
     for (const item of evalSet) {
-        const result = await rankImagesForPost(item.postId);
+        const result = await findMatchForPost(item.postId);
 
-        const topImage = result.images[0];
+        const topImage = result.match;
 
         const isCorrect =
             topImage?.filename === item.expectedImage;
@@ -25,6 +25,18 @@ async function runEvaluation() {
             `top1=${topImage?.filename ?? "none"}, ` +
             `${isCorrect ? "CORRECT" : "WRONG"}`
         );
+
+        if (!topImage) {
+            console.log(
+                `  Status: ${result.status}`
+            );
+
+            for (const rejection of result.reasons.slice(0, 5)) {
+                console.log(
+                    `  ${rejection.filename}: ${rejection.reason}`
+                );
+            }
+        }
     }
 
     const precision = correct / evalSet.length;
