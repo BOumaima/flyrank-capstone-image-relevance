@@ -6,11 +6,11 @@ export function isRetryableError(error) {
     }
 
     if (status === 429) {
-        const details = error?.error?.details ?? [];
+        const details = error?.details ?? error?.error?.details ?? [];
 
         const hasQuotaFailure = details.some(
             (detail) =>
-                detail["@type"]?.includes("QuotaFailure")
+                detail?.["@type"] === "type.googleapis.com/google.rpc.QuotaFailure"
         );
 
         return !hasQuotaFailure;
