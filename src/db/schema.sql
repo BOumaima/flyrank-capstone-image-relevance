@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS llm_usage (
     input_tokens INTEGER,
     output_tokens INTEGER,
     total_tokens INTEGER,
-    estimated_cost_usd NUMERIC(10, 6) DEFAULT 0,
+    estimated_cost_usd NUMERIC(10, 6),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

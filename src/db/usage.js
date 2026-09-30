@@ -8,7 +8,7 @@ export async function logLlmUsage({
     inputTokens = null,
     outputTokens = null,
     totalTokens = null,
-    estimatedCostUsd = 0,
+    estimatedCostUsd = null,
 }) {
     await pool.query(
         `
