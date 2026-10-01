@@ -17,7 +17,8 @@ if (!image) {
     throw new Error("red-fox.jpg not found in database");
 }
 
-const vector = await generateEmbedding(image.caption);
+const embeddingResult = await generateEmbedding(image.caption);
+const vector = embeddingResult.vector;
 
 await saveImageEmbedding({
     imageId: image.id,
