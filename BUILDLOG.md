@@ -1,301 +1,319 @@
-# BUILDLOG
+# Build Log
 
-This log records how the capstone was built, where AI assistance was used, what went wrong, and what changed.
+## Project
 
-## Step 1 — Initialize backend
+AI Image Relevance System
 
-### What was built
-- Node.js project
-- Express server
-- `/health` endpoint
-- development and start scripts
-- environment variable example
-- Git ignore rules
+## Development approach
 
-### AI assistance
-AI helped structure the initial Express project and suggest a minimal backend layout.
+The project was implemented incrementally with a verification and Git
+commit checkpoint after each major stage.
 
-### Result
-The API starts successfully and exposes a health endpoint.
+## 1. Backend initialization
 
----
+Created the Node.js/Express backend, health endpoint, environment
+example, Git ignore rules, and npm scripts.
 
-## Step 2 — Define image metadata schema
+The project uses Node's environment-file support:
 
-### What was built
-A Zod schema for:
-
-- subject
-- category
-- attributes
-- caption
-- confidence
-
-### AI assistance
-AI helped translate the capstone's structured metadata requirement into a Zod validation schema and test.
-
-### Result
-Valid and invalid metadata objects were correctly distinguished.
-
----
-
-## Step 3 — Add PostgreSQL
-
-### What was built
-- PostgreSQL 16 through Docker Compose
-- database connection using `pg`
-- initial `images` table
-
-### AI assistance
-AI helped design the initial PostgreSQL schema and connection setup.
-
-### Result
-The application connected successfully to PostgreSQL.
-
----
-
-## Step 4 — Build image dataset
-
-### What was built
-A 40-image dataset organized into four categories:
-
-- animals
-- vehicles
-- food
-- nature
-
-A manifest records the dataset filenames and categories.
-
-### AI assistance
-AI helped organize the dataset structure and manifest.
-
-### Result
-The initial dataset contains 40 images across four categories.
-
----
-
-## Step 5 — Integrate Gemini vision
-
-### What was built
-Gemini vision analysis was added through `@google/genai`.
-
-The model receives an image and returns structured metadata.
-
-### What went wrong
-The initial vision model configuration returned a 404 model error. The configured model was updated after following the API error's supported-model guidance.
-
-The first JSON approach also produced Markdown code fences.
-
-### What changed
-The request was changed to use structured JSON output with:
-
-- `responseMimeType`
-- `responseSchema`
-
-### Result
-The vision response became machine-readable JSON.
-
----
-
-## Step 6 — Validate AI output
-
-### What was built
-Gemini output is passed through the Zod schema before the application accepts it.
-
-### AI assistance
-AI helped place validation at the model boundary so invalid model output does not enter the application as trusted data.
-
-### Result
-Invalid structured output is rejected.
-
----
-
-## Step 7 — Add batch image processing
-
-### What was built
-A batch job scans the dataset, analyzes each image, and saves valid metadata to PostgreSQL.
-
-### What went wrong
-The first batch run encountered real API failures, including:
-
-- HTTP 503
-- HTTP 429
-
-For example, `vehicles/bus.jpg` failed with a 503 high-demand response.
-
-### Result
-The batch continued processing other images instead of stopping the entire job.
-
----
-
-## Step 8 — Add retries and usage tracking
-
-### What was built
-- retry helper
-- retryable HTTP status detection
-- retry delay handling
-- `llm_usage` table
-- usage logging helper
-
-### AI assistance
-AI helped design exponential-backoff retry behavior and separate retryable from non-retryable errors.
-
-### Result
-Retry behavior was tested with simulated failures, and usage records can be persisted.
-
----
-
-## Step 9 — Generate image embeddings
-
-### What was built
-Image captions are converted into 768-dimensional embeddings and stored in PostgreSQL.
-
-### AI assistance
-AI helped structure the embedding module, persistence layer, and idempotent embedding job.
-
-### Result
-Image embeddings were generated and stored successfully for the processed image records.
-
----
-
-## Step 10 — Generate post embeddings
-
-### What was built
-Five initial blog posts were added with subjects and categories.
-
-Post embeddings were generated using the same embedding model.
-
-### AI assistance
-AI helped design the post persistence and embedding job.
-
-### Result
-Five posts and their embeddings were stored successfully.
-
----
-
-## Step 11 — Add semantic similarity ranking
-
-### What was built
-Cosine similarity compares post embeddings with image embeddings.
-
-Candidates are sorted from highest to lowest similarity.
-
-### AI assistance
-AI helped implement and test the cosine similarity function and ranking flow.
-
-### Result
-The red fox article ranked `red-fox.jpg` first.
-
----
-
-## Step 12 — Add mismatch guard
-
-### What was built
-The mismatch guard checks:
-
-1. category
-2. subject
-3. confidence
-4. similarity
-
-### AI assistance
-AI helped separate semantic ranking from deterministic acceptance rules.
-
-### Result
-A wolf candidate for a red fox post was rejected with an explicit subject-mismatch reason.
-
----
-
-## Step 13 — Handle no confident match
-
-### What was built
-If no candidate passes the mismatch guard, the system returns:
-
-```text
-no_confident_match
+``` powershell
+node --env-file=.env
 ```
 
-with rejection reasons.
+## 2. Structured metadata
 
-### What was tested
-A temporary technology post was created when the image library had no technology image.
+Added Zod validation for:
 
-### Result
-The system refused to invent a confident match.
-
----
-
-## Step 14 — Add matching API
-
-### What was built
-Endpoint:
-
-```text
-GET /posts/:id/images
+``` text
+subject
+category
+attributes
+caption
+confidence
 ```
 
-The API validates the post ID and returns the matching result or a useful error.
+Verified valid and invalid metadata cases.
 
-### Result
-Valid, invalid, and unknown post IDs were tested.
+## 3. PostgreSQL
 
----
+Added PostgreSQL through Docker Compose and created persistent tables
+for images, embeddings, posts, and LLM usage.
 
-## Step 15 — Add evaluation
+Added a reproducible schema initializer.
 
-### What was built
-A labeled evaluation set and a top-1 precision script were added.
+## 4. Dataset
 
-### Result
-Initial evaluation:
+Created a 40-image dataset across four categories:
 
-```text
-Correct: 4/5
-Top-1 precision: 80.00%
+``` text
+animals
+vehicles
+food
+nature
 ```
 
-One important failure was observed:
+Added `dataset/manifest.json`.
 
-```text
-expected=mountain.jpg
-top1=bear.jpg
+## 5. Gemini vision
+
+Added `src/llm/vision.js` using structured JSON output.
+
+The response is validated before persistence.
+
+## 6. Vision model availability issue
+
+An initially configured vision model returned a provider 404.
+
+The model was made configurable through `GEMINI_MODEL` and the project
+was moved to a working configured model.
+
+## 7. Batch processing
+
+Implemented `src/jobs/processImages.js`.
+
+The job:
+
+1.  scans the dataset
+2.  skips processed filenames
+3.  calls vision analysis
+4.  validates metadata
+5.  assigns review status
+6.  saves metadata
+7.  logs usage
+
+## 8. Retry handling
+
+Added:
+
+``` text
+src/utils/retry.js
+src/utils/retryableError.js
+src/utils/getRetryDelay.js
 ```
 
-### Lesson
-Semantic similarity alone is not sufficient for trustworthy image selection. Evaluation must expose failures rather than hide them.
+Transient failures are retried. Quota exhaustion is not repeatedly
+retried.
 
----
+## 9. Gemini quota limitation
 
-## Step 16 — Evidence and build documentation
+During processing, temporary provider errors and quota/rate limitations
+prevented all 40 images from being processed.
 
-### What is being documented
-- concrete test evidence
-- implementation locations
-- AI assistance
-- failures and fixes
-- known unfinished requirements
+Current state:
 
-### Principle
-The documentation should distinguish completed work from remaining work instead of claiming that unfinished requirements are complete.
+``` text
+40 dataset images
+24 processed
+16 unprocessed
+```
 
----
+The job remains idempotent so processing can continue later.
 
-## Lessons learned so far
+## 10. Image embeddings
 
-### 1. AI output must be treated as untrusted input
-Structured output and schema validation are both necessary.
+Added image embedding generation with:
 
-### 2. Semantic similarity is not enough
-An image can be semantically related to a post without being the correct image for the post.
+``` text
+gemini-embedding-2
+768 dimensions
+```
 
-### 3. The mismatch guard is a separate decision layer
-Ranking answers "what is similar?" while the guard answers "is this candidate acceptable?"
+Embeddings are persisted in PostgreSQL.
 
-### 4. Evaluation should expose weaknesses
-The current 80% top-1 precision result shows that at least one evaluated case needs improvement.
+## 11. Post embeddings
 
-### 5. External API failures are part of the system design
-The 503 and 429 failures demonstrated why retry handling, progress tracking, and later idempotency are important.
+Added post embedding generation and idempotent post seeding.
 
-### 6. Build evidence while implementing
-Keeping test outputs and failure explanations makes the final capstone easier to verify and review.
+The evaluation set was expanded to 10 posts.
+
+## 12. Embedding persistence bug
+
+During verification, `testEmbeddingStorage.js` failed because the entire
+embedding response object was passed as `vector`.
+
+The actual embedding function returns:
+
+``` js
+{
+    vector: [...],
+    usage: ...
+}
+```
+
+The test was corrected to extract:
+
+``` js
+const embeddingResult = await generateEmbedding(image.caption);
+const vector = embeddingResult.vector;
+```
+
+After the fix:
+
+``` text
+Embedding saved.
+Image ID: 9
+Dimensions: 768
+```
+
+## 13. Semantic ranking
+
+Implemented cosine similarity and ranking.
+
+For the red fox post:
+
+``` text
+1. red-fox.jpg - 0.4000
+2. cat.jpg - 0.2809
+3. golden-retriever.jpg - 0.2572
+```
+
+## 14. Mismatch guard
+
+Implemented checks for:
+
+``` text
+category
+subject
+confidence
+similarity
+```
+
+Current thresholds:
+
+``` text
+confidence: 0.70
+similarity: 0.24
+```
+
+Verified:
+
+``` text
+fox → accepted
+wolf → rejected
+low confidence → rejected
+wrong category → rejected
+```
+
+## 15. No-confident-match behavior
+
+Implemented `no_confident_match` with human-readable rejection reasons.
+
+This prevents the system from forcing a recommendation when no candidate
+passes the guard.
+
+## 16. Review workflow
+
+Added:
+
+``` text
+GET /images/review
+PATCH /images/:id/review
+```
+
+Tested:
+
+-   `needs_review`
+-   `accepted`
+-   `rejected`
+-   invalid status
+-   nonexistent image ID
+
+## 17. Evaluation
+
+The evaluation set contains 10 posts.
+
+Current run:
+
+``` text
+Correct matches: 6/10
+Wrong matches: 0
+No confident match: 4
+Top-1 precision: 60.00%
+```
+
+This score is provisional because four expected images are not yet
+processed.
+
+## 18. Usage tracking
+
+Added the `llm_usage` table and logging helper.
+
+Vision token usage is recorded when returned by the provider.
+
+Embedding usage metadata was unavailable, so embedding cost is not
+fabricated.
+
+## 19. Guard normalization
+
+Normalized text comparisons so casing differences do not cause
+unnecessary mismatches.
+
+Subject matching also handles cases where a detected subject contains
+the expected subject, while still rejecting unrelated subjects.
+
+## 20. Documentation
+
+Prepared:
+
+``` text
+README.md
+EVIDENCE.md
+BUILDLOG.md
+```
+
+The documentation records implementation evidence and limitations
+honestly, including the provisional evaluation result and incomplete
+image processing.
+
+## 21. AI-assisted development
+
+AI assistance was used to:
+
+-   break the capstone into implementation stages
+-   explain backend architecture
+-   review implementation ideas
+-   diagnose runtime/database errors
+-   design validation and mismatch-guard behavior
+-   improve retry/error handling
+-   interpret evaluator requirements
+-   review test outputs
+-   draft documentation
+
+AI suggestions were treated as proposals and verified by running the
+actual application, database checks, tests, and Git checkpoints.
+
+## 22. Current status
+
+Implemented and verified:
+
+``` text
+✓ Express backend
+✓ PostgreSQL persistence
+✓ Reproducible database schema
+✓ 40-image dataset
+✓ Structured vision output
+✓ Zod validation
+✓ Batch processing
+✓ Retry handling
+✓ Image embeddings
+✓ Post embeddings
+✓ Semantic ranking
+✓ Mismatch guard
+✓ No-confident-match behavior
+✓ Review workflow
+✓ Idempotent processing/seeding
+✓ Evaluation dataset
+✓ Usage logging
+✓ Evaluation reporting
+✓ Documentation
+```
+
+Remaining operational task:
+
+``` text
+Process the remaining 16 images after Gemini quota/rate limitations clear.
+Then regenerate missing embeddings if necessary and rerun the full evaluation.
+```
+
+The current 60% Top-1 precision must remain labeled **provisional**
+until that final run is completed.

@@ -1,272 +1,257 @@
-# EVIDENCE
+# Capstone Evidence
 
-This file records concrete proof for the capstone requirements and evaluator probes.
+This document maps the capstone requirements to concrete implementation
+evidence.
 
-## 1. Structured image metadata
+## 1. Dataset
 
-The image metadata schema is validated with Zod.
+**Requirement:** At least 40 images across at least four categories with
+a labeled evaluation set.
 
-Test output:
+**Evidence:** `dataset/` contains 40 images across `animals`,
+`vehicles`, `food`, and `nature`, with 10 images per category.
+`dataset/manifest.json` records the dataset. `src/evaluation/evalSet.js`
+contains 10 labeled evaluation posts.
 
-```text
+**Status:** PASS
+
+## 2. Structured image metadata
+
+**Evidence:** `src/llm/vision.js` requests structured JSON containing
+`subject`, `category`, `attributes`, `caption`, and `confidence`.
+`src/schemas/imageMetadata.js` validates the result with Zod.
+
+Test:
+
+``` powershell
+node src/schemas/imageMetadata.test.js
+```
+
+Result:
+
+``` text
 Valid metadata: true
 Invalid metadata: false
 ```
 
-Implementation:
-- `src/schemas/imageMetadata.js`
-- `src/schemas/imageMetadata.test.js`
+**Status:** PASS
 
-## 2. Vision model structured output
+## 3. Low-confidence flagging
 
-The vision integration uses Gemini structured JSON output with the fields:
+**Evidence:** `src/config/imageReview.js` defines a `0.70` threshold.
+`src/jobs/processImages.js` stores results below the threshold as
+`needs_review`.
 
-- `subject`
-- `category`
-- `attributes`
-- `caption`
-- `confidence`
+**Status:** PASS
 
-The response is validated with the Zod image metadata schema before being used by the application.
+## 4. Batch processing and retries
 
-Implementation:
-- `src/llm/vision.js`
+**Evidence:** `src/jobs/processImages.js` processes the dataset, skips
+existing filenames, validates metadata, persists results, assigns review
+status, and logs usage. Retry logic is implemented in
+`src/utils/retry.js`, `src/utils/retryableError.js`, and
+`src/utils/getRetryDelay.js`.
 
-## 3. Batch image processing
+Test:
 
-The batch job scans the dataset by category, sends images to the vision model, validates the returned metadata, and persists successful results in PostgreSQL.
-
-Implementation:
-- `src/jobs/processImages.js`
-
-The first batch run also exposed real API failures, including HTTP 503 and HTTP 429 responses. These failures were retained in the build history rather than hidden.
-
-## 4. Retry handling
-
-Retry behavior was tested with simulated retryable and non-retryable errors.
-
-Retryable status codes currently include:
-
-- 429
-- 500
-- 502
-- 503
-- 504
-
-Implementation:
-- `src/utils/retry.js`
-- `src/utils/retryableError.js`
-- `src/utils/getRetryDelay.js`
-
-## 5. LLM usage tracking
-
-LLM usage is persisted in PostgreSQL in the `llm_usage` table.
-
-Tracked fields include:
-
-- model
-- status
-- token counts
-- estimated cost
-- image filename when applicable
-
-Implementation:
-- `src/db/schema.sql`
-- `src/db/usage.js`
-
-## 6. Image embeddings
-
-Image captions are converted into embeddings and stored in PostgreSQL.
-
-Observed embedding dimensions:
-
-```text
-768
+``` powershell
+node src/utils/testRetry.js
 ```
 
-The embedding model used by the project is configured through:
+Result:
 
-```text
-GEMINI_EMBEDDING_MODEL
+``` text
+Running attempt 1
+Attempt 1 failed. Retrying in 500ms...
+Running attempt 2
+Attempt 2 failed. Retrying in 1000ms...
+Running attempt 3
+Result: success
 ```
 
-Current configured model:
+**Status:** PASS
 
-```text
-gemini-embedding-2
-```
+## 5. Semantic image matching
 
-Implementation:
-- `src/llm/embedding.js`
-- `src/db/embeddings.js`
-- `src/jobs/generateImageEmbeddings.js`
+**Evidence:** `src/llm/embedding.js`,
+`src/jobs/generateImageEmbeddings.js`,
+`src/jobs/generatePostEmbeddings.js`,
+`src/matching/cosineSimilarity.js`, and `src/matching/rankImages.js`.
 
-## 7. Post embeddings
+The project uses `gemini-embedding-2` with 768 dimensions.
 
-Blog posts are also embedded so that posts and image descriptions can be compared semantically.
+Red fox ranking test:
 
-Five initial posts were seeded and their embeddings were generated successfully.
-
-Implementation:
-- `src/data/posts.js`
-- `src/db/posts.js`
-- `src/jobs/seedPosts.js`
-- `src/jobs/generatePostEmbeddings.js`
-
-## 8. Similarity ranking
-
-Cosine similarity is used to rank image candidates for a post.
-
-Example result for the red fox post:
-
-```text
+``` text
 1. red-fox.jpg - 0.4000
 2. cat.jpg - 0.2809
 3. golden-retriever.jpg - 0.2572
-4. bear.jpg - 0.2459
-5. wolf.jpg - 0.2426
 ```
 
-The red fox image ranked first.
+**Status:** PASS
 
-Implementation:
-- `src/matching/cosineSimilarity.js`
-- `src/matching/rankImages.js`
+## 6. Mismatch guard
 
-## 9. Mismatch guard
+**Evidence:** `src/matching/mismatchGuard.js` checks category, subject,
+confidence, and similarity.
 
-The mismatch guard checks:
+Verified results:
 
-1. category
-2. subject
-3. confidence
-4. semantic similarity
-
-Test results:
-
-```text
-FOX: { accepted: true, reason: 'Candidate passed the mismatch guard' }
-
-WOLF: {
-  accepted: false,
-  reason: 'Subject mismatch: expected red fox, detected wolf'
-}
-
-LOW CONFIDENCE: {
-  accepted: false,
-  reason: 'Low confidence: 0.50 is below 0.70'
-}
-
-WRONG CATEGORY: {
-  accepted: false,
-  reason: 'Category mismatch: expected red fox, detected vehicle'
-}
+``` text
+FOX: accepted
+WOLF: rejected — Subject mismatch: expected red fox, detected wolf
+LOW CONFIDENCE: rejected — Low confidence: 0.50 is below 0.70
+WRONG CATEGORY: rejected — Category mismatch: expected animal, detected vehicle
 ```
 
-Implementation:
-- `src/matching/mismatchGuard.js`
+**Status:** PASS
 
-## 10. No-confident-match behavior
+## 7. No confident match
 
-A post whose candidates do not pass the mismatch guard returns:
+**Evidence:** `src/matching/findMatch.js` returns
+`status: no_confident_match` with human-readable rejection reasons when
+all candidates fail the guard.
 
-```json
-{
-  "status": "no_confident_match",
-  "match": null
-}
+The current evaluation contains four `no_confident_match` results.
+
+**Status:** PASS
+
+## 8. Human review workflow
+
+**Evidence:** Implemented in `src/controllers/imageReviewController.js`,
+`src/db/images.js`, and `src/routes/postRoutes.js`.
+
+Endpoints:
+
+``` text
+GET /images/review
+PATCH /images/:id/review
 ```
 
-The response also includes rejection reasons for the evaluated candidates.
+The workflow was tested with `needs_review`, `accepted`, and `rejected`
+states, plus invalid status and nonexistent image-ID cases.
 
-A temporary technology post was used to verify this behavior because the image library did not contain a matching technology image.
+**Status:** PASS
 
-Implementation:
-- `src/matching/findMatch.js`
+## 9. Persistence
 
-## 11. Matching API
+**Evidence:** PostgreSQL schema is in `src/db/schema.sql`;
+initialization is in `src/db/initSchema.js`.
 
-The matching endpoint is:
+Connection test:
 
-```text
-GET /posts/:id/images
+``` powershell
+node --env-file=.env src/db/testConnection.js
 ```
 
-Observed API behaviors include:
+Result:
 
-```text
-Valid post with no suitable image:
-status = 200
-status = "no_confident_match"
-
-Invalid post ID:
-status = 400
-
-Unknown post:
-status = 404
+``` text
+Database connected: { now: ... }
 ```
 
-Implementation:
-- `src/controllers/postImagesController.js`
-- `src/routes/postRoutes.js`
+Embedding persistence test:
 
-## 12. Top-1 evaluation
-
-The initial evaluation set contains five labeled posts.
-
-Observed result:
-
-```text
-Post 1: expected=red-fox.jpg, top1=red-fox.jpg, CORRECT
-Post 2: expected=wolf.jpg, top1=wolf.jpg, CORRECT
-Post 3: expected=mountain.jpg, top1=bear.jpg, WRONG
-Post 4: expected=car.jpg, top1=car.jpg, CORRECT
-Post 5: expected=apple.jpg, top1=apple.jpg, CORRECT
-
-Correct: 4/5
-Top-1 precision: 80.00%
+``` powershell
+node --env-file=.env src/db/testEmbeddingStorage.js
 ```
 
-The mountain failure is intentionally recorded as a failure. The evaluation result was not changed to hide the incorrect prediction.
+Result:
 
-Implementation:
-- `src/evaluation/evalSet.js`
-- `src/evaluation/runEval.js`
+``` text
+Embedding saved.
+Image ID: 9
+Dimensions: 768
+```
 
-## 13. Database persistence
+**Status:** PASS
 
-The project uses PostgreSQL running through Docker Compose.
+## 10. Idempotency
 
-Main persisted data currently includes:
+**Evidence:** Image filenames are unique and processing skips existing
+images. Post titles are unique and post seeding uses conflict-safe
+persistence.
 
-- images
-- image embeddings
-- posts
-- post embeddings
-- LLM usage
+**Status:** PASS
 
-Implementation:
-- `docker-compose.yml`
-- `src/db/schema.sql`
+## 11. Boundary validation
 
-## 14. Secrets
+**Evidence:** Zod validates image metadata. The review controller
+validates that image IDs are integers and statuses are `accepted` or
+`rejected`.
 
-API keys are loaded from environment variables and `.env` is excluded from Git.
+**Status:** PASS
 
-The repository contains `.env.example` with placeholder values.
+## 12. LLM usage tracking
 
-## 15. Known gaps still to be completed
+**Evidence:** `src/db/usage.js` writes operation, model, status, token
+fields when available, and estimated cost when available into
+`llm_usage`.
 
-The following requirements are not yet represented as completed evidence and must be addressed before the final capstone is considered complete:
+Test:
 
-- all 40 dataset images persisted and processed successfully
-- low-confidence images explicitly flagged for review
-- embedding calls fully attributed in usage/cost tracking
-- idempotency for batch/seeding operations
-- review/approval workflow
-- evaluation set expanded to 10+ labeled posts
-- final threshold tuning using the evaluation set
-- final README and `capstone.yaml`
-- final acceptance tests
+``` powershell
+node --env-file=.env src/db/testUsage.js
+```
 
-This section is intentionally explicit so the evidence file does not claim unfinished work as completed.
+Result:
+
+``` text
+Usage logged.
+```
+
+Embedding usage metadata was unavailable from the provider response, so
+no artificial token or dollar values are inserted.
+
+**Status:** PASS with documented limitation
+
+## 13. Evaluation
+
+**Evidence:** `src/evaluation/evalSet.js` defines 10 labeled posts and
+`src/evaluation/runEval.js` computes Top-1 precision.
+
+Current run:
+
+``` text
+Correct matches: 6/10
+Wrong matches: 0
+No confident match: 4
+Top-1 precision: 60.00%
+```
+
+This is **provisional** because four expected images have not yet
+completed vision processing.
+
+**Status:** PARTIAL / PROVISIONAL
+
+## 14. Secrets hygiene
+
+**Evidence:** `.env` is ignored and `.env.example` is tracked. Secrets
+are supplied through environment variables.
+
+**Status:** PASS
+
+## 15. Reproducibility
+
+**Evidence:** `docker-compose.yml`, `src/db/initSchema.js`,
+`src/jobs/seedPosts.js`, `src/evaluation/runEval.js`, `README.md`, and
+`capstone.yaml` define the run/seed/test workflow.
+
+**Status:** PASS
+
+## 16. Layered architecture
+
+**Evidence:** Responsibilities are separated into `controllers`, `db`,
+`jobs`, `llm`, `matching`, `routes`, `schemas`, `utils`, and
+`evaluation`.
+
+**Status:** PASS
+
+## 17. Current limitation
+
+The repository contains all 40 dataset images, but only 24 have
+completed vision processing at this checkpoint. The remaining 16 were
+blocked by Gemini provider quota/rate limitations.
+
+The 60% evaluation result must therefore remain labeled provisional
+until the remaining images are processed and the evaluation is rerun.

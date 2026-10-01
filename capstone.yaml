@@ -9,3 +9,5 @@ base_url: http://localhost:3000
 endpoints:
   - GET /health
   - GET /posts/:id/images
+  - GET /images/review
+  - PATCH /images/:id/review

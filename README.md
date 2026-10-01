@@ -1,411 +1,441 @@
-# AI Image Understanding & Content Matching Engine
+# AI Image Relevance System
 
-An AI-powered backend that analyzes images, generates structured metadata, creates semantic embeddings, and matches images to blog posts.
+A backend system that understands an image library, generates structured
+image metadata, embeds image descriptions and blog posts, and recommends
+images to posts using semantic similarity plus a mismatch guard.
 
-The system is designed around one important rule:
+The system is designed to prefer **no confident match** over returning
+an obviously unsuitable image.
 
-> A semantically similar image is not automatically a valid match.
+## 1. Project goal
 
-The matching pipeline therefore combines semantic ranking with a mismatch guard that can reject unsuitable candidates and return `no_confident_match`.
-
----
-
-## Architecture
-
-```text
-                         ┌─────────────────────┐
-                         │      Dataset        │
-                         │   40 images / 4     │
-                         │     categories      │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │   Batch Processor   │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │   Gemini Vision     │
-                         │ structured output   │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │   Zod Validation    │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │     PostgreSQL      │
-                         │  Image Metadata     │
-                         └──────────┬──────────┘
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │ Image Embeddings    │
-                         └──────────┬──────────┘
-                                    │
-                                    │
-┌─────────────────────┐             │
-│     Blog Posts      │             │
-└──────────┬──────────┘             │
-           │                        │
-           ▼                        │
-┌─────────────────────┐             │
-│ Post Embeddings     │             │
-└──────────┬──────────┘             │
-           │                        │
-           └───────────┬────────────┘
-                       ▼
-              ┌─────────────────┐
-              │ Similarity      │
-              │ Ranking         │
-              └────────┬────────┘
-                       ▼
-              ┌─────────────────┐
-              │ Mismatch Guard  │
-              └────────┬────────┘
-                       │
-             ┌─────────┴─────────┐
-             │                   │
-             ▼                   ▼
-       Valid Match        No Confident Match
+``` text
+Images
+   │
+   ▼
+Batch processing
+   │
+   ▼
+Gemini vision analysis
+   │
+   ▼
+Validated image metadata
+   │
+   ▼
+Caption embeddings
+   │
+   ▼
+Image vectors ───────────────┐
+                             │
+Posts ──► post embeddings ───┤
+                             ▼
+                    Semantic ranking
+                             │
+                             ▼
+                      Mismatch guard
+                       │           │
+                       ▼           ▼
+                  Match       No confident match
 ```
 
----
+## 2. Main features
 
-## How matching works
+-   40-image dataset across four categories: animals, vehicles, food,
+    and nature.
+-   Gemini vision analysis with structured JSON output.
+-   Zod validation for image metadata.
+-   Confidence-based review status.
+-   Retry handling for transient provider failures.
+-   PostgreSQL persistence.
+-   Image and post embeddings using `gemini-embedding-2`.
+-   Cosine-similarity ranking.
+-   Mismatch guard based on category, subject, vision confidence, and
+    semantic similarity.
+-   Explicit `no_confident_match` responses with rejection reasons.
+-   Image review workflow.
+-   Idempotent image and post processing.
+-   LLM usage logging.
+-   Evaluation dataset with 10 posts.
 
-For a requested blog post:
+## 3. Architecture
 
-1. The post's embedding is loaded.
-2. Image embeddings are compared using cosine similarity.
-3. Candidates are ranked from highest to lowest similarity.
-4. The mismatch guard checks each candidate.
-5. A candidate is accepted only if it satisfies the guard rules.
-6. If no candidate passes, the API returns `no_confident_match` with rejection reasons.
-
-The current mismatch guard checks:
-
-- category
-- subject
-- confidence
-- similarity
-
----
-
-## Tech Stack
-
-- Node.js
-- Express
-- PostgreSQL
-- Docker Compose
-- Google Gemini
-- `@google/genai`
-- Zod
-- JavaScript / ES modules
-
----
-
-## Project Structure
-
-```text
-.
-├── dataset/
-│   ├── animals/
-│   ├── vehicles/
-│   ├── food/
-│   └── nature/
-│
-├── src/
-│   ├── controllers/
-│   ├── data/
-│   ├── db/
-│   ├── evaluation/
-│   ├── jobs/
-│   ├── llm/
-│   ├── matching/
-│   ├── routes/
-│   ├── schemas/
-│   └── utils/
-│
-├── .env.example
-├── .gitignore
-├── BUILDLOG.md
-├── EVIDENCE.md
-├── docker-compose.yml
-├── package.json
-└── README.md
+``` text
+HTTP routes
+    │
+    ▼
+Controllers
+    │
+    ▼
+Matching / application logic
+    │
+    ├── Ranking
+    ├── Mismatch guard
+    └── Review decisions
+    │
+    ▼
+Database layer
+    │
+    ├── images
+    ├── image_embeddings
+    ├── posts
+    ├── post_embeddings
+    └── llm_usage
+    │
+    ▼
+PostgreSQL
 ```
 
----
+LLM-specific code is isolated under `src/llm/`. Batch jobs are under
+`src/jobs/`. Evaluation code is under `src/evaluation/`.
 
-## Requirements
+## 4. Repository structure
 
-Before running the project, make sure you have:
+``` text
+src/
+├── config/
+├── controllers/
+├── data/
+├── db/
+├── evaluation/
+├── jobs/
+├── llm/
+├── matching/
+├── routes/
+├── schemas/
+├── utils/
+└── server.js
 
-- Node.js
-- Docker
-- Gemini API key
+dataset/
+├── animals/
+├── vehicles/
+├── food/
+├── nature/
+└── manifest.json
+```
 
----
+## 5. Requirements
 
-## Environment variables
+-   Node.js
+-   Docker
+-   PostgreSQL through Docker Compose
+-   Gemini API key
 
-Create a local `.env` file from `.env.example`.
+## 6. Environment
 
-Example:
+Create `.env` from `.env.example`.
 
-```env
-DATABASE_URL=postgres://postgres:dev@localhost:5432/image_matching
-GEMINI_API_KEY=your_api_key_here
-GEMINI_MODEL=gemini-3.6-flash
+``` env
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=your_vision_model
 GEMINI_EMBEDDING_MODEL=gemini-embedding-2
+DATABASE_URL=postgres://postgres:dev@localhost:5432/image_matching
 ```
 
-Never commit `.env`.
+Do not commit `.env`.
 
----
+## 7. Start PostgreSQL and initialize the database
 
-## Start PostgreSQL
-
-Start the database with:
-
-```powershell
+``` powershell
 docker compose up -d
+node --env-file=.env src/db/initSchema.js
 ```
 
-Check that the container is running:
+Verify:
 
-```powershell
-docker ps
+``` powershell
+node --env-file=.env src/db/testConnection.js
 ```
 
----
+## 8. Start the API
 
-## Run the API
-
-Install dependencies:
-
-```powershell
-npm install
-```
-
-Start the server:
-
-```powershell
+``` powershell
 npm start
 ```
 
-The API runs on:
+Base URL:
 
-```text
+``` text
 http://localhost:3000
 ```
 
----
+Health endpoint:
 
-## Health check
-
-Open:
-
-```text
+``` text
 GET /health
 ```
 
-PowerShell:
+## 9. Seed posts
 
-```powershell
-Invoke-RestMethod http://localhost:3000/health
+``` powershell
+node --env-file=.env src/jobs/seedPosts.js
 ```
 
-Expected response:
+The seed operation is idempotent by post title.
 
-```json
-{
-  "status": "ok"
-}
+## 10. Process images
+
+``` powershell
+node --env-file=.env src/jobs/processImages.js
 ```
 
----
+The job validates metadata, assigns review status, persists results,
+logs LLM usage, retries transient failures, and skips already processed
+filenames.
 
-## Image matching API
+### Current processing status
 
-The main matching endpoint is:
+The repository contains all 40 dataset images.
 
-```text
+At this documentation checkpoint, 24 images have successfully completed
+vision processing and are persisted in PostgreSQL. 16 remain unprocessed
+because Gemini requests encountered provider quota/rate limitations.
+
+The job is idempotent, so the remaining images can be processed later
+without reprocessing successful records.
+
+## 11. Generate embeddings
+
+``` powershell
+node --env-file=.env src/jobs/generateImageEmbeddings.js
+node --env-file=.env src/jobs/generatePostEmbeddings.js
+```
+
+Embedding model:
+
+``` text
+gemini-embedding-2
+```
+
+Configured dimensions:
+
+``` text
+768
+```
+
+## 12. Image matching
+
+Endpoint:
+
+``` text
 GET /posts/:id/images
 ```
 
 Example:
 
-```powershell
-Invoke-RestMethod http://localhost:3000/posts/1/images
+``` text
+GET /posts/1/images
 ```
 
-The endpoint returns either a matched image or:
+Flow:
 
-```json
-{
-  "status": "no_confident_match"
-}
+``` text
+Post
+  │
+  ▼
+Post embedding
+  │
+  ▼
+Cosine similarity ranking
+  │
+  ▼
+Candidate images
+  │
+  ▼
+Mismatch guard
+  │
+  ├── accepted → match
+  │
+  └── rejected → try next candidate
+                    │
+                    ▼
+             no confident match
 ```
 
-when no candidate passes the mismatch guard.
+## 13. Mismatch guard
 
----
+The guard checks:
 
-## Batch processing
+1.  Category compatibility.
+2.  Subject compatibility.
+3.  Vision confidence.
+4.  Semantic similarity.
 
-The image-processing job analyzes images with Gemini and stores the resulting metadata in PostgreSQL.
+Current defaults:
+
+``` text
+minimum confidence: 0.70
+minimum similarity: 0.24
+```
+
+Example rejection reasons:
+
+``` text
+Subject mismatch: expected red fox, detected wolf
+Low confidence: 0.50 is below 0.70
+Category mismatch: expected animal, detected vehicle
+```
+
+## 14. Review workflow
+
+Get images requiring review:
+
+``` text
+GET /images/review
+```
+
+Update an image:
+
+``` text
+PATCH /images/:id/review
+```
+
+Supported decisions:
+
+``` text
+accepted
+rejected
+```
+
+## 15. Evaluation
 
 Run:
 
-```powershell
-node --env-file=.env src/jobs/processImages.js
-```
-
----
-
-## Generate image embeddings
-
-Run:
-
-```powershell
-node --env-file=.env src/jobs/generateImageEmbeddings.js
-```
-
----
-
-## Seed blog posts
-
-Run:
-
-```powershell
-node --env-file=.env src/jobs/seedPosts.js
-```
-
----
-
-## Generate post embeddings
-
-Run:
-
-```powershell
-node --env-file=.env src/jobs/generatePostEmbeddings.js
-```
-
----
-
-## Evaluation
-
-The evaluation script measures top-1 precision on the labeled evaluation set.
-
-Run:
-
-```powershell
+``` powershell
 node --env-file=.env src/evaluation/runEval.js
 ```
 
-The initial evaluation produced:
+Top-1 precision:
 
-```text
-Correct: 4/5
-Top-1 precision: 80.00%
+``` text
+correct first suggestions / total evaluation posts
 ```
 
-One evaluated case currently fails:
+Current provisional result:
 
-```text
-expected=mountain.jpg
-top1=bear.jpg
+``` text
+Correct matches: 6/10
+Wrong matches: 0
+No confident match: 4
+Top-1 precision: 60.00%
 ```
 
-This failure is intentionally documented rather than hidden.
+This is **not the final dataset score**. Four expected images are among
+the images that have not completed vision processing, so the evaluation
+must be rerun after the remaining images are successfully processed.
 
----
+## 16. Verified examples
 
-## Database
+For `The Secret Life of Red Foxes`, the system returns `red-fox.jpg`
+with confidence `0.98` and similarity approximately `0.4000`.
 
-PostgreSQL is used for persistent storage.
+A forced wolf candidate is rejected with:
 
-The current schema contains data for:
+``` text
+Subject mismatch: expected red fox, detected wolf
+```
 
-- images
-- image embeddings
-- posts
-- post embeddings
-- LLM usage
+A low-confidence candidate at `0.50` is rejected against the `0.70`
+threshold.
 
-The database is started through Docker Compose.
+A wrong-category candidate is rejected.
 
----
+## 17. LLM usage tracking
 
-## AI usage and cost tracking
+LLM operations are stored in `llm_usage`.
 
-LLM usage is recorded in PostgreSQL through the `llm_usage` table.
+Tracked fields include:
 
-The project tracks model usage, token information when available, status, and estimated cost.
+-   operation
+-   image filename when applicable
+-   model
+-   status
+-   input tokens when available
+-   output tokens when available
+-   total tokens when available
+-   estimated cost when available
 
-The build log documents API failures and implementation changes encountered during development.
+Successful vision calls returned token usage.
 
-See:
+The embedding responses used by this implementation did not provide
+usage metadata, so embedding token usage and dollar cost are recorded as
+unavailable rather than invented.
 
-- `EVIDENCE.md`
-- `BUILDLOG.md`
+## 18. Testing
 
----
+``` powershell
+node src/schemas/imageMetadata.test.js
+node src/utils/testRetry.js
+node src/matching/testCosineSimilarity.js
+node --env-file=.env src/matching/testRanking.js
+node src/matching/testMismatchGuard.js
+node --env-file=.env src/matching/testFindMatch.js
+node --env-file=.env src/db/testConnection.js
+node --env-file=.env src/db/testEmbeddingStorage.js
+node --env-file=.env src/db/testUsage.js
+```
 
-## Current limitations
+Verified:
 
-This project is still being hardened toward the final capstone requirements.
+-   valid metadata accepted
+-   invalid metadata rejected
+-   retry logic succeeds after transient failures
+-   cosine similarity behaves correctly
+-   red fox ranks first
+-   wolf mismatch rejected
+-   low-confidence candidate rejected
+-   wrong category rejected
+-   full red fox matching flow succeeds
+-   PostgreSQL connection succeeds
+-   768-dimensional embedding is persisted
+-   usage logging succeeds
 
-Known remaining work includes:
+## 19. Current limitations
 
-- processing and persisting all 40 dataset images successfully
-- explicitly flagging low-confidence image metadata for review
-- completing embedding-call cost attribution
-- adding stronger idempotency to batch and seed operations
-- implementing the review/approval workflow
-- expanding the evaluation set to 10+ labeled posts
-- tuning the mismatch thresholds using the evaluation set
-- completing final acceptance tests
+### Incomplete image processing
 
-These limitations are intentionally documented so the current evaluation reflects the actual implementation state.
+40 images exist in the dataset, but 24 have currently completed vision
+processing. The remaining 16 were blocked by provider quota/rate
+limitations.
 
----
+### Provisional evaluation
 
-## Design principles
+The current 60% Top-1 precision is provisional because the image corpus
+used by the evaluator is incomplete.
 
-### Validate at boundaries
+### Embedding cost visibility
 
-AI-generated structured data is treated as untrusted input and validated before entering the application.
+The embedding response did not provide usage metadata. No dollar cost is
+invented without a documented pricing basis.
 
-### Separate ranking from acceptance
+### Dataset licensing
 
-Similarity ranking identifies candidates.
+The dataset images were generated for the project. This README does not
+make an independent third-party licensing claim.
 
-The mismatch guard decides whether a candidate is acceptable.
+## 20. Security
 
-### Refuse when confidence is insufficient
+-   API credentials are supplied through environment variables.
+-   `.env` is ignored by Git.
+-   `.env.example` contains placeholders only.
+-   Secrets must not be committed.
 
-The system should return `no_confident_match` instead of forcing an image selection when no candidate clears the acceptance rules.
+## 21. Reproducibility
 
-### Measure failures
+``` powershell
+docker compose up -d
+node --env-file=.env src/db/initSchema.js
+node --env-file=.env src/jobs/seedPosts.js
+npm start
+```
 
-The evaluation set is used to expose incorrect matches instead of changing the expected results to make the metric look better.
+Then, when provider quota permits:
 
----
+``` powershell
+node --env-file=.env src/jobs/processImages.js
+node --env-file=.env src/jobs/generateImageEmbeddings.js
+node --env-file=.env src/jobs/generatePostEmbeddings.js
+node --env-file=.env src/evaluation/runEval.js
+```
 
-## Development log
-
-`BUILDLOG.md` records:
-
-- where AI assistance was used
-- implementation decisions
-- failures encountered
-- changes made
-- lessons learned
-
-`EVIDENCE.md` records concrete implementation and test evidence for the capstone requirements.
+See `EVIDENCE.md` for requirement-by-requirement evidence and
+`BUILDLOG.md` for implementation history.
